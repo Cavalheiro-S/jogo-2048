@@ -10,24 +10,189 @@
 #define ARROW_RIGHT 77
 #define ESC_KEY 27
 
+struct PLAYER
+{
+    char name[50];
+    int points;
+};
+
+struct NODE
+{
+    struct PLAYER player;
+    struct NODE *next;
+};
+
 struct POSITION
 {
     int line;
     int column;
 };
 
-void printBoard(int board[4][4])
+void printPlayers(struct NODE *head)
 {
-    system("cls");
+    struct NODE *current = head;
+    printf("\nJogadores:\n");
+    while (current != NULL)
+    {
+        printf("%s\t%d\n", current->player.name, current->player.points);
+        current = current->next;
+    }
+}
+
+void saveScore(struct NODE *head, char name[50], int score)
+{
+    struct NODE *current = head;
+    struct NODE *previous = NULL;
+    struct NODE *newNode = (struct NODE *)malloc(sizeof(struct NODE));
+    newNode->player.points = score;
+    strcpy(newNode->player.name, name);
+    newNode->next = NULL;
+
+    if (head == NULL)
+    {
+        head = newNode;
+    }
+    else
+    {
+        while (current != NULL && current->player.points > score)
+        {
+            previous = current;
+            current = current->next;
+        }
+        if (previous == NULL)
+        {
+            newNode->next = head;
+            head = newNode;
+        }
+        else
+        {
+            previous->next = newNode;
+            newNode->next = current;
+        }
+    }
+}
+
+int getPoints(int board[4][4])
+{
+    int points = 0;
+    int maxNumber = 0;
+    int sum = 0;
+    int maxSum = 0;
+    int maxLine = 0;
+    int maxColumn = 0;
+
+    // Verifica o maior número
     for (int line = 0; line < 4; line++)
     {
         for (int column = 0; column < 4; column++)
         {
-            printf("%d", board[line][column]);
+            if (board[line][column] > maxNumber)
+            {
+                maxNumber = board[line][column];
+            }
+        }
+    }
+
+    // Verifica a soma dos números
+    for (int line = 0; line < 4; line++)
+    {
+        sum = 0;
+        for (int column = 0; column < 4; column++)
+        {
+            sum += board[line][column];
+        }
+        if (sum > maxSum)
+        {
+            maxSum = sum;
+            maxLine = line;
+        }
+    }
+
+    // Verifica a soma das colunas
+    for (int column = 0; column < 4; column++)
+    {
+        sum = 0;
+        for (int line = 0; line < 4; line++)
+        {
+            sum += board[line][column];
+        }
+        if (sum > maxSum)
+        {
+            maxSum = sum;
+            maxColumn = column;
+        }
+    }
+
+    points = maxNumber + maxSum + maxLine + maxColumn;
+    return points;
+}
+
+void printBoard(int board[4][4])
+{
+    system("cls");
+    int points = getPoints(board);
+    printf("Pontos: %d\n", points);
+    for (int line = 0; line < 4; line++)
+    {
+        for (int column = 0; column < 4; column++)
+        {
+            int currentNumber = board[line][column];
+            if (currentNumber == 0)
+                printf(".");
+            else
+                printf("%d", currentNumber);
             printf("\t");
         }
         printf("\n");
     }
+}
+
+void verifyIsWinner(int board[4][4])
+{
+    for (int line = 0; line < 4; line++)
+    {
+        for (int column = 0; column < 4; column++)
+        {
+            if (board[line][column] == 2048)
+            {
+                printf("Parabens voce ganhou o jogo\n");
+                exit(0);
+            }
+        }
+    }
+}
+
+int verifyHasMoves(int board[4][4])
+{
+    int hasMoves = 0;
+    for (int line = 0; line < 4; line++)
+    {
+        for (int column = 0; column < 4; column++)
+        {
+            if (board[line][column] == 0)
+            {
+                hasMoves = 1;
+            }
+            if (line > 0 && board[line][column] == board[line - 1][column])
+            {
+                hasMoves = 1;
+            }
+            if (line < 3 && board[line][column] == board[line + 1][column])
+            {
+                hasMoves = 1;
+            }
+            if (column > 0 && board[line][column] == board[line][column - 1])
+            {
+                hasMoves = 1;
+            }
+            if (column < 3 && board[line][column] == board[line][column + 1])
+            {
+                hasMoves = 1;
+            }
+        }
+    }
+
+    return hasMoves;
 }
 
 struct POSITION getRandomPosition()
@@ -38,29 +203,42 @@ struct POSITION getRandomPosition()
     return position;
 }
 
-void setRandomNumberPosition(int board[4][4])
+void placeInitialRandomNumber(int board[4][4])
 {
     struct POSITION pos1 = getRandomPosition();
     struct POSITION pos2 = getRandomPosition();
+
+    while (pos1.column == pos2.column && pos1.line == pos2.line)
+    {
+        pos1 = getRandomPosition();
+        pos2 = getRandomPosition();
+    }
 
     board[pos1.line][pos1.column] = 2;
     board[pos2.line][pos2.column] = 2;
 }
 
+void placeOneRandomNumber(int board[4][4])
+{
+    struct POSITION pos = getRandomPosition();
+
+    while (board[pos.line][pos.column] != 0)
+        pos = getRandomPosition();
+
+    board[pos.line][pos.column] = 2;
+}
+
 void initialScreen(int board[4][4])
 {
     printf("\n\nBEM VINDO AO JOGO 2048\n\n");
-    setRandomNumberPosition(board);
+    placeInitialRandomNumber(board);
     printBoard(board);
     printf("Aperta uma tecla para iniciar o jogo\n");
 }
 
-// Os números vão se mover uma linha a cima
-// Números que estão na primeira linha não fazem nada
-// Caso haja algum número na linha que o número se movimentar então somam-se os valores e os coloca na ultima casa disponivel.
 void moveNumbersUp(int board[4][4])
 {
-    for (int line = 1; line < 4; line++)
+    for (int line = 0; line < 4; line++)
     {
         for (int column = 0; column < 4; column++)
         {
@@ -95,7 +273,7 @@ void moveNumbersUp(int board[4][4])
 
 void moveNumbersDown(int board[4][4])
 {
-    for (int line = 2; line >= 0; line--)
+    for (int line = 3; line >= 0; line--)
     {
         for (int column = 0; column < 4; column++)
         {
@@ -129,7 +307,7 @@ void moveNumbersDown(int board[4][4])
 
 void moveNumbersRight(int board[4][4])
 {
-    for (int line = 1; line < 4; line++)
+    for (int line = 0; line < 4; line++)
     {
         for (int column = 0; column < 4; column++)
         {
@@ -166,7 +344,7 @@ void moveNumbersRight(int board[4][4])
 
 void moveNumbersLeft(int board[4][4])
 {
-    for (int line = 1; line < 4; line++)
+    for (int line = 0; line < 4; line++)
     {
         for (int column = 0; column < 4; column++)
         {
@@ -199,9 +377,11 @@ void moveNumbersLeft(int board[4][4])
     }
 }
 
-void verifyKeyPressed(int board[4][4])
+void verifyKeyPressed(int board[4][4], struct NODE *head)
 {
     int pressedKey;
+    int hasMoves = 1;
+    char playAgain;
     while (pressedKey != ESC_KEY)
     {
         printf("Use as setas do seu teclado para jogar ... (ESC para sair)\n");
@@ -210,32 +390,32 @@ void verifyKeyPressed(int board[4][4])
         if (pressedKey == ESCAPE_KEY)
         {
             pressedKey = getch();
-
             switch (pressedKey)
             {
             case ARROW_UP:
                 moveNumbersUp(board);
-                printBoard(board);
                 break;
             case ARROW_DOWN:
                 moveNumbersDown(board);
-                printBoard(board);
                 break;
             case ARROW_LEFT:
                 moveNumbersLeft(board);
-                printBoard(board);
                 break;
             case ARROW_RIGHT:
                 moveNumbersRight(board);
-                printBoard(board);
                 break;
             default:
-                printf("Outra tecla especial pressionada.\n");
+                break;
             }
         }
-        else
+        placeOneRandomNumber(board);
+        verifyIsWinner(board);
+        printBoard(board);
+        hasMoves = verifyHasMoves(board);
+        if (hasMoves == 0)
         {
-            printf("Tecla pressionada: %c\n", pressedKey);
+            printf("Voce perdeu!\n");
+            break;
         }
     }
 }
@@ -251,7 +431,8 @@ int main(void)
         {0, 0, 0, 0},
         {0, 0, 0, 0}};
 
+    struct NODE *head = (struct NODE *)malloc(sizeof(struct NODE));
     initialScreen(board);
-    verifyKeyPressed(board);
+    verifyKeyPressed(board, head);
     return 0;
 }
