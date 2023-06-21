@@ -32,11 +32,6 @@ struct POSITION
 void saveScore(struct NODE **head, int score)
 {
     struct NODE *newNode = (struct NODE *)malloc(sizeof(struct NODE));
-    if (newNode == NULL)
-    {
-        printf("Erro ao alocar memória.\n");
-        return;
-    }
 
     newNode->player.score = score;
     printf("Para salvar o seu score, digite o seu nome: ");
@@ -57,6 +52,18 @@ void saveScore(struct NODE **head, int score)
         }
         newNode->next = currentNode->next;
         currentNode->next = newNode;
+    }
+}
+
+void getBestScores(struct NODE *head)
+{
+    struct NODE *currentNode = head;
+    int i = 1;
+    while (currentNode != NULL && i <= 5)
+    {
+        printf("%d - %s: %d\n", i, currentNode->player.name, currentNode->player.score);
+        currentNode = currentNode->next;
+        i++;
     }
 }
 
@@ -150,6 +157,22 @@ void verifyIsWinner(int board[4][4])
     }
 }
 
+int verifyEmptySpaces(int board[4][4])
+{
+    int emptySpaces = 0;
+    for (int line = 0; line < 4; line++)
+    {
+        for (int column = 0; column < 4; column++)
+        {
+            if (board[line][column] == 0)
+            {
+                emptySpaces++;
+            }
+        }
+    }
+    return emptySpaces;
+}
+
 int verifyHasMoves(int board[4][4])
 {
     int hasMoves = 0;
@@ -157,7 +180,7 @@ int verifyHasMoves(int board[4][4])
     {
         for (int column = 0; column < 4; column++)
         {
-            if (board[line][column] == 0)
+            if (verifyEmptySpaces(board) > 0)
             {
                 hasMoves = 1;
             }
@@ -208,6 +231,10 @@ void placeInitialRandomNumber(int board[4][4])
 
 void placeOneRandomNumber(int board[4][4])
 {
+    if (verifyEmptySpaces(board) == 0)
+    {
+        return;
+    }
     struct POSITION pos = getRandomPosition();
 
     while (board[pos.line][pos.column] != 0)
@@ -365,7 +392,7 @@ void verifyKeyPressed(int board[4][4], struct NODE *head)
 {
     int pressedKey;
     int hasMoves = 1;
-    char playAgain;
+
     while (pressedKey != ESC_KEY)
     {
         printf("Use as setas do seu teclado para jogar ... (ESC para sair)\n");
@@ -392,14 +419,50 @@ void verifyKeyPressed(int board[4][4], struct NODE *head)
                 break;
             }
         }
-        placeOneRandomNumber(board);
-        verifyIsWinner(board);
-        printBoard(board);
-        hasMoves = verifyHasMoves(board);
+        if (verifyEmptySpaces(board) == 0)
+        {
+            hasMoves = 0;
+        }
+        else
+        {
+            placeOneRandomNumber(board);
+            verifyIsWinner(board);
+            printBoard(board);
+            hasMoves = verifyHasMoves(board);
+        }
         if (hasMoves == 0)
         {
-            printf("Voce perdeu!\n");
-            break;
+            printf("Nenhum movimento possivel\n");
+            saveScore(&head, getScore(board));
+            getBestScores(head);
+            printf("Deseja finalizar (F) ou reiniciar (R) o jogo? ");
+            char playAgain;
+            fflush(stdin);
+            scanf("%c", &playAgain);
+            if (playAgain == 'F' || playAgain == 'f')
+            {
+                exit(0);
+            }
+            else if (playAgain == 'R' || playAgain == 'r')
+            {
+
+                for (int linha = 0; linha < 4; linha++)
+                {
+                    for (int coluna = 0; coluna < 4; coluna++)
+                    {
+                        board[linha][coluna] = 0;
+                    }
+                }
+
+                placeInitialRandomNumber(board);
+                printBoard(board);
+                hasMoves = 1;
+            }
+            else if (playAgain != 'f' || playAgain != 'F' || playAgain != 'r' || playAgain != 'R')
+            {
+                printf("Opcao invalida!\n");
+                exit(0);
+            }
         }
     }
 }
@@ -408,6 +471,7 @@ int main(void)
 {
     srand(time(NULL)); // Inicializa a semente do gerador de números aleatórios
 
+    struct NODE *head = NULL;
     // Fazer o board do jogo
     int board[4][4] = {
         {0, 0, 0, 0},
@@ -415,9 +479,8 @@ int main(void)
         {0, 0, 0, 0},
         {0, 0, 0, 0}};
 
-    struct NODE *head = NULL;
     initialScreen(board);
     verifyKeyPressed(board, head);
-    
+
     return 0;
 }
