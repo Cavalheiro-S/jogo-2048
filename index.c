@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <conio.h>
+#include <string.h>
 
 #define ESCAPE_KEY 224
 #define ARROW_UP 72
@@ -13,7 +14,7 @@
 struct PLAYER
 {
     char name[50];
-    int points;
+    int score;
 };
 
 struct NODE
@@ -28,53 +29,40 @@ struct POSITION
     int column;
 };
 
-void printPlayers(struct NODE *head)
+void saveScore(struct NODE **head, int score)
 {
-    struct NODE *current = head;
-    printf("\nJogadores:\n");
-    while (current != NULL)
-    {
-        printf("%s\t%d\n", current->player.name, current->player.points);
-        current = current->next;
-    }
-}
-
-void saveScore(struct NODE *head, char name[50], int score)
-{
-    struct NODE *current = head;
-    struct NODE *previous = NULL;
     struct NODE *newNode = (struct NODE *)malloc(sizeof(struct NODE));
-    newNode->player.points = score;
-    strcpy(newNode->player.name, name);
+    if (newNode == NULL)
+    {
+        printf("Erro ao alocar memória.\n");
+        return;
+    }
+
+    newNode->player.score = score;
+    printf("Para salvar o seu score, digite o seu nome: ");
+    scanf("%s", newNode->player.name);
     newNode->next = NULL;
 
-    if (head == NULL)
+    if (*head == NULL || score > (*head)->player.score)
     {
-        head = newNode;
+        newNode->next = *head;
+        *head = newNode;
     }
     else
     {
-        while (current != NULL && current->player.points > score)
+        struct NODE *currentNode = *head;
+        while (currentNode->next != NULL && score <= currentNode->next->player.score)
         {
-            previous = current;
-            current = current->next;
+            currentNode = currentNode->next;
         }
-        if (previous == NULL)
-        {
-            newNode->next = head;
-            head = newNode;
-        }
-        else
-        {
-            previous->next = newNode;
-            newNode->next = current;
-        }
+        newNode->next = currentNode->next;
+        currentNode->next = newNode;
     }
 }
 
-int getPoints(int board[4][4])
+int getScore(int board[4][4])
 {
-    int points = 0;
+    int score = 0;
     int maxNumber = 0;
     int sum = 0;
     int maxSum = 0;
@@ -123,15 +111,15 @@ int getPoints(int board[4][4])
         }
     }
 
-    points = maxNumber + maxSum + maxLine + maxColumn;
-    return points;
+    score = maxNumber + maxSum + maxLine + maxColumn;
+    return score;
 }
 
 void printBoard(int board[4][4])
 {
     system("cls");
-    int points = getPoints(board);
-    printf("Pontos: %d\n", points);
+    int score = getScore(board);
+    printf("Pontos: %d\n", score);
     for (int line = 0; line < 4; line++)
     {
         for (int column = 0; column < 4; column++)
@@ -242,7 +230,6 @@ void moveNumbersUp(int board[4][4])
     {
         for (int column = 0; column < 4; column++)
         {
-            // Verifica se o número é diferente de 0
             if (board[line][column] != 0)
             {
                 int number = board[line][column];
@@ -311,14 +298,12 @@ void moveNumbersRight(int board[4][4])
     {
         for (int column = 0; column < 4; column++)
         {
-            // Verifica se o número é diferente de 0
             if (board[line][column] != 0)
             {
                 int number = board[line][column];
                 int columnToMove = column + 1;
                 while (columnToMove < 4)
                 {
-                    // Se a coluna que o número vai se mover for igual a 0
                     if (board[line][columnToMove] == 0)
                     {
                         board[line][columnToMove] = number;
@@ -348,7 +333,6 @@ void moveNumbersLeft(int board[4][4])
     {
         for (int column = 0; column < 4; column++)
         {
-            // Verifica se o número é diferente de 0
             if (board[line][column] != 0)
             {
                 int number = board[line][column];
@@ -431,8 +415,9 @@ int main(void)
         {0, 0, 0, 0},
         {0, 0, 0, 0}};
 
-    struct NODE *head = (struct NODE *)malloc(sizeof(struct NODE));
+    struct NODE *head = NULL;
     initialScreen(board);
     verifyKeyPressed(board, head);
+    
     return 0;
 }
